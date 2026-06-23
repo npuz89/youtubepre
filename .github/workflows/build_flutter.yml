@@ -27,14 +27,15 @@ jobs:
     - name: Install dependencies
       run: flutter pub get
 
-    # Очищаем кэш перед сборкой, чтобы Gradle перечитал структуру plugins
-    - name: Clean Flutter Build Cache
-      run: flutter clean
+    # Тотальная очистка старого кэша сборки
+    - name: Pre-build Clean
+      run: |
+        flutter clean
+        flutter pub get
 
     # Точечный патч для исправления ошибки Proguard в кэше плагина WebView
     - name: Patch flutter_inappwebview Proguard Error
       run: |
-        flutter pub get # Пересоздаем кэш после clean
         WEBVIEW_BUILD_GRADLE="/home/runner/.pub-cache/hosted/pub.dev/flutter_inappwebview-5.8.0/android/build.gradle"
         if [ -f "$WEBVIEW_BUILD_GRADLE" ]; then
           sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g" "$WEBVIEW_BUILD_GRADLE"
@@ -42,7 +43,6 @@ jobs:
         fi
 
     - name: Build APK
-      # УБРАЛИ флаг --android-skip-build-dependency-validation, мешающий сборке Java
       run: flutter build apk --debug
       env:
         _JAVA_OPTIONS: "-Xmx4g"
