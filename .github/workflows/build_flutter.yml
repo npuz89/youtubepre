@@ -22,7 +22,7 @@ jobs:
       uses: subosito/flutter-action@v2
       with:
         channel: 'stable'
-        flutter-version: '3.24.3' # ФИКСИРУЕМ СТАБИЛЬНУЮ ВЕРСИЮ БЕЗ БАГОВ
+        flutter-version: '3.24.3'
 
     - name: Install dependencies
       run: flutter pub get
@@ -34,3 +34,7 @@ jobs:
 
     - name: Build APK
       run: flutter build apk --debug --android-skip-build-dependency-validation
+      env:
+        # Принудительно выделяем память для компилятора Java на сервере
+        _JAVA_OPTIONS: "-Xmx4g"
+        GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.workers.max=2"
