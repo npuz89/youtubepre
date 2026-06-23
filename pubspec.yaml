@@ -10,33 +10,15 @@ dependencies:
   flutter:
     sdk: flutter
   
-  # UI
   cupertino_icons: ^1.0.6
-  
-  # YouTube парсинг
   youtube_explode_dart: ^2.3.1
-  
-  # Аудио воспроизведение (совместимые версии)
   audio_service: ^0.18.13
   just_audio: ^0.9.36
-  
-  # Управление состоянием
   provider: ^6.1.1
-  
-  # Кеширование изображений
   cached_network_image: ^3.3.1
-  
-  # Форматирование
   intl: ^0.18.1
-  
-  # HTTP запросы
   http: ^1.1.0
-  
-  # Работа с файлами
   path_provider: ^2.1.1
-  
-  # Разрешения
-  permission_handler: ^11.0.1
 
 dev_dependencies:
   flutter_test:
