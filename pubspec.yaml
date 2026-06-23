@@ -9,9 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  webview_flutter: ^4.4.2
-  flutter_background_service: ^5.0.5  # ДОБАВИТЬ
-  wakelock_plus: ^1.2.8                # ДОБАВИТЬ
+  flutter_inappwebview: ^6.0.0
+  flutter_background_service: ^5.0.5
+  wakelock_plus: ^1.2.8
 
 dev_dependencies:
   flutter_test:

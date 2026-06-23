@@ -1,23 +1,22 @@
 import 'dart:ui';
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Включаем удержание процессора, чтобы музыка не спала
+  // Удерживаем процессор от засыпания
   WakelockPlus.enable();
   
-  // Инициализируем фоновый сервис Android
+  // Запускаем фоновый сервис системы
   await initializeService();
   
   runApp(const MyApp());
 }
 
-// Настройка фонового сервиса Android
 Future<void> initializeService() async {
   final service = FlutterBackgroundService();
 
@@ -25,10 +24,10 @@ Future<void> initializeService() async {
     androidConfiguration: AndroidConfiguration(
       onStart: onStart,
       autoStart: true,
-      isForegroundMode: true, // Говорим Android, что это важное фоновое приложение
+      isForegroundMode: true,
       notificationChannelId: 'my_foreground',
       initialNotificationTitle: 'YouTube Background Player',
-      initialNotificationContent: 'Приложение работает в фоновом режиме',
+      initialNotificationContent: 'Воспроизведение активно в фоне',
       foregroundServiceTypes: [AndroidForegroundServiceType.mediaPlayback],
     ),
     iosConfiguration: IosConfiguration(),
@@ -38,8 +37,6 @@ Future<void> initializeService() async {
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
   DartPluginRegistrant.ensureInitialized();
-  
-  // Этот код просто держит службу активной в фоне
   Timer.periodic(const Duration(seconds: 1), (timer) async {
     if (service is AndroidServiceInstance) {
       if (await service.isForegroundService()) {
@@ -67,46 +64,11 @@ class YouTubeScreen extends StatefulWidget {
   const YouTubeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const YouTubeScreenStateful();
-  }
+  State<YouTubeScreen> createState() => _YouTubeScreenState();
 }
 
-class YouTubeScreenStateful extends StatefulWidget {
-  const YouTubeScreenStateful({super.key});
-
-  @override
-  State<YouTubeScreenStateful> createState() => _YouTubeScreenState();
-}
-
-class _YouTubeScreenState extends State<YouTubeScreenStateful> {
-  late final WebViewController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0x00000000))
-      ..clearCache()
-      ..setUserAgent(
-        "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-      )
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageFinished: (String url) {
-            // Обман плеера YouTube, чтобы он думал, что вкладка активна
-            _controller.runJavaScript('''
-              Object.defineProperty(document, 'hidden', {get: function() { return false; }, configurable: true});
-              Object.defineProperty(document, 'visibilityState', {get: function() { return 'visible'; }, configurable: true});
-              document.dispatchEvent(new Event('visibilitychange'));
-            ''');
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse('https://m.youtube.com'));
-  }
+class _YouTubeScreenState extends State<YouTubeScreen> {
+  InAppWebViewController? webViewController;
 
   @override
   Widget build(BuildContext context) {
@@ -116,15 +78,38 @@ class _YouTubeScreenState extends State<YouTubeScreenStateful> {
           canPop: false,
           onPopInvokedWithResult: (didPop, result) async {
             if (didPop) return;
-            if (await _controller.canGoBack()) {
-              await _controller.goBack();
+            if (webViewController != null && await webViewController!.canGoBack()) {
+              await webViewController!.goBack();
             } else {
               if (context.mounted) {
                 Navigator.of(context).pop();
               }
             }
           },
-          child: WebViewWidget(controller: _controller),
+          child: InAppWebView(
+            initialUrlRequest: URLRequest(url: WebUri("https://m.youtube.com")),
+            initialSettings: InAppWebViewSettings(
+              javaScriptEnabled: true,
+              domStorageEnabled: true,
+              mediaPlaybackRequiresUserGesture: false, // Разрешаем автоплей
+              
+              // КРИТИЧЕСКИ ВАЖНЫЕ НАСТРОЙКИ ДЛЯ ФОНА:
+              allowsBackgroundMediaPlayback: true, // Разрешаем играть в фоне на уровне движка
+              useShouldOverrideUrlLoading: true,
+              userAgent: "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+            ),
+            onWebViewCreated: (controller) {
+              webViewController = controller;
+            },
+            onLoadStop: (controller, url) async {
+              // Внедряем JS-скрипт, обманывающий Visibility API самого YouTube
+              await controller.evaluateJavascript(source: '''
+                Object.defineProperty(document, 'hidden', {get: function() { return false; }, configurable: true});
+                Object.defineProperty(document, 'visibilityState', {get: function() { return 'visible'; }, configurable: true});
+                document.dispatchEvent(new Event('visibilitychange'));
+              ''');
+            },
+          ),
         ),
       ),
     );
