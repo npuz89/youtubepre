@@ -8,6 +8,5 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  youtube_explode_dart: ^2.2.0
-  better_player: ^0.0.83 # Поддерживает фоновый режим из коробки
-  cue_sheet: ^1.2.0
+  youtube_explode_dart: ^2.2.2
+  better_player: ^0.0.83
