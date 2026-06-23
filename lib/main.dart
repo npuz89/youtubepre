@@ -23,7 +23,8 @@ Future<void> initializeService() async {
       notificationChannelId: 'my_foreground',
       initialNotificationTitle: 'YouTube Background Player',
       initialNotificationContent: 'Воспроизведение активно в фоне',
-      foregroundServiceTypes: [AndroidForegroundServiceType.mediaPlayback],
+      // Убрали проблемную строку foregroundServiceTypes, так как в стабильной версии 
+      // тип mediaPlayback подтягивается автоматически через AndroidManifest
     ),
     iosConfiguration: IosConfiguration(),
   );
@@ -82,8 +83,8 @@ class _YouTubeScreenState extends State<YouTubeScreen> {
             }
           },
           child: InAppWebView(
-            initialUrlRequest: URLRequest(url: WebUri("https://m.youtube.com")),
-            // Настройки для версии 5.x изменены здесь:
+            // ИСПРАВЛЕНО: Используем стандартный Uri.parse вместо WebUri
+            initialUrlRequest: URLRequest(url: Uri.parse("https://m.youtube.com")),
             initialOptions: InAppWebViewGroupOptions(
               crossPlatform: InAppWebViewOptions(
                 javaScriptEnabled: true,
@@ -92,7 +93,6 @@ class _YouTubeScreenState extends State<YouTubeScreen> {
               ),
               android: AndroidInAppWebViewOptions(
                 domStorageEnabled: true,
-                // Разрешаем работу медиа в фоне на уровне движка
                 supportMultipleWindows: false,
               ),
             ),
@@ -100,7 +100,7 @@ class _YouTubeScreenState extends State<YouTubeScreen> {
               webViewController = controller;
             },
             onLoadStop: (controller, url) async {
-              // Обман Visibility API самого YouTube
+              // Хак для обмана Visibility API YouTube
               await controller.evaluateJavascript(source: '''
                 Object.defineProperty(document, 'hidden', {get: function() { return false; }, configurable: true});
                 Object.defineProperty(document, 'visibilityState', {get: function() { return 'visible'; }, configurable: true});
