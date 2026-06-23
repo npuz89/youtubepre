@@ -53,12 +53,5 @@ flutter {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.24"
-    
-    // ХАРДКОРНЫЙ ФИКС ДЛЯ ДВИЖКА FLUTTER (если Gradle теряет пути к классам)
-    def flutterSdkPath = System.getenv("FLUTTER_ROOT") ?: localProperties.getProperty("flutter.sdk")
-    if (flutterSdkPath != null) {
-        implementation files("$flutterSdkPath/bin/cache/artifacts/engine/android-arm/flutter.jar")
-        implementation files("$flutterSdkPath/bin/cache/artifacts/engine/android-arm64/flutter.jar")
-        implementation files("$flutterSdkPath/bin/cache/artifacts/engine/android-x64/flutter.jar")
-    }
+    implementation "androidx.annotation:annotation:1.7.0"
 }

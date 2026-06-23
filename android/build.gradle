@@ -22,8 +22,10 @@ subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
 }
 
-// БЕЗОПАСНАЯ КOНФИГУРАЦИЯ БЕЗ afterEvaluate
-subprojects {
+// ПРИНУДИТЕЛЬНОЕ ДОБАВЛЕНИЕ ЗАВИСИМОСТЕЙ ДЛЯ ВСЕХ ПЛАГИНОВ И ПОДПРОЕКТОВ
+subprojects { project ->
+    project.evaluationDependsOn(':app')
+    
     project.plugins.withType(com.android.build.gradle.BasePlugin).configureEach {
         project.android {
             compileSdkVersion 34
@@ -31,11 +33,11 @@ subprojects {
                 targetSdkVersion 34
             }
         }
+        // Каждому модулю даем доступ к аннотациям AndroidX
+        project.dependencies {
+            implementation "androidx.annotation:annotation:1.7.0"
+        }
     }
-}
-
-subprojects {
-    project.evaluationDependsOn(':app')
 }
 
 tasks.register("clean", Delete) {
