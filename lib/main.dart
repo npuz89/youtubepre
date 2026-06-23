@@ -37,13 +37,13 @@ class _YouTubeScreenState extends State<YouTubeScreen> {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0x00000000))
-      ..clearCache() // Очистка кэша от прошлых ошибок
+      ..clearCache()
       ..setUserAgent(
-          "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+        "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+      )
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (String url) {
-            // Обман плеера для фонового режима
             _controller.runJavaScript('''
               Object.defineProperty(document, 'hidden', {get: function() { return false; }, configurable: true});
               Object.defineProperty(document, 'visibilityState', {get: function() { return 'visible'; }, configurable: true});
@@ -59,17 +59,13 @@ class _YouTubeScreenState extends State<YouTubeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        // Используем новый PopScope вместо устаревшего WillPopScope
         child: PopScope(
-          canPop: false, // Блокируем автоматическое закрытие приложения
+          canPop: false,
           onPopInvokedWithResult: (didPop, result) async {
             if (didPop) return;
-
-            // Проверяем, можно ли вернуться назад внутри истории YouTube
             if (await _controller.canGoBack()) {
-              await _controller.goBack(); // Возвращаемся назад на сайт
+              await _controller.goBack();
             } else {
-              // Если идти назад больше некуда, закрываем приложение
               if (context.mounted) {
                 Navigator.of(context).pop();
               }
