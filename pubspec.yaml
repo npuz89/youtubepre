@@ -9,18 +9,41 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  
+  # UI
+  cupertino_icons: ^1.0.6
+  
+  # YouTube парсинг
   youtube_explode_dart: ^2.3.1
+  
+  # Аудио воспроизведение (совместимые версии)
   audio_service: ^0.18.13
-  just_audio: ^0.9.37
-  just_audio_background: ^0.0.13
-  provider: ^6.1.2
-  cached_network_image: ^3.4.0
-  intl: ^0.19.0
+  just_audio: ^0.9.36
+  
+  # Управление состоянием
+  provider: ^6.1.1
+  
+  # Кеширование изображений
+  cached_network_image: ^3.3.1
+  
+  # Форматирование
+  intl: ^0.18.1
+  
+  # HTTP запросы
+  http: ^1.1.0
+  
+  # Работа с файлами
+  path_provider: ^2.1.1
+  
+  # Разрешения
+  permission_handler: ^11.0.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^3.0.1
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/

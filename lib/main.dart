@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/audio_service.dart';
 import 'screens/home_screen.dart';
-import 'screens/search_screen.dart';
 import 'screens/library_screen.dart';
 import 'widgets/bottom_nav_bar.dart';
 
@@ -20,7 +19,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(
           create: (_) => AudioPlayerService(),
-          lazy: false, // Инициализируем сразу
+          lazy: false,
         ),
       ],
       child: MaterialApp(
@@ -71,7 +70,6 @@ class _MainScreenState extends State<MainScreen> {
         currentIndex: _currentIndex,
         onTap: (index) {
           if (index == 2) {
-            // Центральная кнопка - создание
             _showCreateOptions();
             return;
           }
@@ -128,11 +126,5 @@ class _MainScreenState extends State<MainScreen> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    // Освобождаем ресурсы
-    super.dispose();
   }
 }

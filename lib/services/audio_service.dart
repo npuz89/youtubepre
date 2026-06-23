@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:just_audio_background/just_audio_background.dart';
 import 'youtube_service.dart';
 
 class AudioPlayerService extends BaseAudioHandler {
@@ -9,22 +8,12 @@ class AudioPlayerService extends BaseAudioHandler {
   final AudioPlayer _player = AudioPlayer();
   String? _currentVideoId;
   Timer? _progressTimer;
-  MediaItem? _currentMediaItem;
 
   AudioPlayerService() {
     _init();
   }
 
   Future<void> _init() async {
-    // Инициализация фонового воспроизведения
-    await JustAudioBackground.init(
-      androidNotificationChannelId: 'com.example.youtube.audio.channel',
-      androidNotificationChannelName: 'YouTube Background Playback',
-      androidNotificationOngoing: true,
-      androidStopForegroundOnPause: true,
-      androidNotificationIcon: 'mipmap/ic_launcher',
-    );
-
     // Подписка на события воспроизведения
     _player.playbackEventStream.listen((event) {
       _broadcastState();
@@ -50,20 +39,21 @@ class AudioPlayerService extends BaseAudioHandler {
     final duration = _player.duration;
     final processingState = _player.processingState;
 
-    // Определяем состояние обработки
-    PlaybackState processingStateEnum;
+    // Определяем состояние обработки для audio_service
+    AudioProcessingState processingStateEnum;
     if (processingState == ProcessingState.idle) {
-      processingStateEnum = PlaybackState.idle;
-    } else if (processingState == ProcessingState.loading) {
-      processingStateEnum = PlaybackState.loading;
-    } else if (processingState == ProcessingState.buffering) {
-      processingStateEnum = PlaybackState.buffering;
+      processingStateEnum = AudioProcessingState.idle;
+    } else if (processingState == ProcessingState.loading || 
+               processingState == ProcessingState.buffering) {
+      processingStateEnum = AudioProcessingState.loading;
     } else if (processingState == ProcessingState.ready) {
-      processingStateEnum = playing ? PlaybackState.playing : PlaybackState.paused;
+      processingStateEnum = playing 
+          ? AudioProcessingState.playing 
+          : AudioProcessingState.paused;
     } else if (processingState == ProcessingState.completed) {
-      processingStateEnum = PlaybackState.completed;
+      processingStateEnum = AudioProcessingState.completed;
     } else {
-      processingStateEnum = PlaybackState.idle;
+      processingStateEnum = AudioProcessingState.idle;
     }
 
     playbackState.add(PlaybackState(
@@ -101,17 +91,17 @@ class AudioPlayerService extends BaseAudioHandler {
       }
 
       // Создаем MediaItem для уведомления
-      _currentMediaItem = MediaItem(
+      final mediaItem = MediaItem(
         id: videoId,
         title: title.isNotEmpty ? title : 'Без названия',
         artist: author.isNotEmpty ? author : 'Неизвестный автор',
         album: 'YouTube',
         artUri: Uri.parse('https://img.youtube.com/vi/$videoId/hqdefault.jpg'),
-        duration: const Duration(seconds: 0), // Будет обновлено позже
+        duration: const Duration(seconds: 0),
       );
 
       // Устанавливаем медиа элемент
-      mediaItem.add(_currentMediaItem!);
+      mediaItem.add(mediaItem);
 
       // Загружаем аудио
       await _player.setAudioSource(
@@ -120,9 +110,9 @@ class AudioPlayerService extends BaseAudioHandler {
 
       // Получаем реальную длительность
       final duration = _player.duration;
-      if (duration != null && _currentMediaItem != null) {
-        _currentMediaItem = _currentMediaItem!.copyWith(duration: duration);
-        mediaItem.add(_currentMediaItem!);
+      if (duration != null) {
+        final updatedMediaItem = mediaItem.copyWith(duration: duration);
+        mediaItem.add(updatedMediaItem);
       }
 
       // Начинаем воспроизведение
@@ -170,13 +160,11 @@ class AudioPlayerService extends BaseAudioHandler {
 
   @override
   Future<void> skipToNext() async {
-    // Здесь можно реализовать переход к следующему видео в плейлисте
     print('Skip to next');
   }
 
   @override
   Future<void> skipToPrevious() async {
-    // Здесь можно реализовать переход к предыдущему видео
     print('Skip to previous');
   }
 
@@ -192,7 +180,6 @@ class AudioPlayerService extends BaseAudioHandler {
     _broadcastState();
   }
 
-  // Получение текущего состояния
   bool get isPlaying => _player.playing;
   Duration get position => _player.position;
   Duration? get duration => _player.duration;
@@ -200,7 +187,6 @@ class AudioPlayerService extends BaseAudioHandler {
 
   @override
   Future<void> onTaskRemoved() async {
-    // Обработка удаления задачи
     await _player.pause();
   }
 
