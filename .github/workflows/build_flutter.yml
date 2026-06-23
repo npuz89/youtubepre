@@ -26,11 +26,14 @@ jobs:
     - name: Install dependencies
       run: flutter pub get
 
-    # ВОТ ОН — НАШ СВЕРХНАДЕЖНЫЙ СПАСИТЕЛЬНЫЙ ХАК:
     - name: Patch flutter_inappwebview Proguard Error
       run: |
-        # Находим файл build.gradle проблемного плагина в кэше pub.dev и заменяем устаревший файл на правильный
+        # Исправляем ошибку Proguard в кэше плагина
         sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g" /home/runner/.pub-cache/hosted/pub.dev/flutter_inappwebview-5.8.0/android/build.gradle
 
     - name: Build APK
-      run: flutter build apk --debug --android-skip-build-dependency-validation
+      # Флаг -PkotlinVersion принудительно выставляет версию для всей сборки
+      run: flutter build apk --debug --android-skip-build-dependency-validation -PkotlinVersion=1.9.24
+      env:
+        # Этот флаг запрещает Flutter переписывать наши файлы build.gradle
+        FLUTTER_SUPPRESS_ANALYTICS: "true"
