@@ -13,9 +13,9 @@ class YouTubeService {
         // Получаем миниатюру
         String thumbnailUrl = '';
         try {
-          thumbnailUrl = video.thumbnails.standardRes?.url.toString() ?? 
-                        video.thumbnails.mediumRes?.url.toString() ??
-                        video.thumbnails.highRes?.url.toString() ?? '';
+          thumbnailUrl = video.thumbnails.standardQuality ?? 
+               video.thumbnails.mediumQuality ?? 
+               video.thumbnails.highQuality ?? '';
         } catch (e) {
           thumbnailUrl = '';
         }
@@ -46,9 +46,9 @@ class YouTubeService {
       for (var video in searchResults.take(20)) {
         String thumbnailUrl = '';
         try {
-          thumbnailUrl = video.thumbnails.standardRes?.url.toString() ?? 
-                        video.thumbnails.mediumRes?.url.toString() ??
-                        video.thumbnails.highRes?.url.toString() ?? '';
+          thumbnailUrl = video.thumbnails.standardQuality ?? 
+               video.thumbnails.mediumQuality ?? 
+               video.thumbnails.highQuality ?? '';
         } catch (e) {
           thumbnailUrl = '';
         }
@@ -77,9 +77,9 @@ class YouTubeService {
       
       String thumbnailUrl = '';
       try {
-        thumbnailUrl = video.thumbnails.standardRes?.url.toString() ?? 
-                      video.thumbnails.mediumRes?.url.toString() ??
-                      video.thumbnails.highRes?.url.toString() ?? '';
+        thumbnailUrl = video.thumbnails.standardQuality ?? 
+               video.thumbnails.mediumQuality ?? 
+               video.thumbnails.highQuality ?? '';
       } catch (e) {
         thumbnailUrl = '';
       }
