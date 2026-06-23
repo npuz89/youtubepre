@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:better_player/better_player.dart';
+import 'package:video_player/video_player.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
+import 'package:audio_session/audio_session.dart';
 
-void main() => runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Настраиваем аудио-сессию для фонового воспроизведения музыкального/видео контента
+  final session = await AudioSession.instance;
+  await session.configure(const AudioSessionConfiguration.music());
+  
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -11,82 +19,82 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       theme: ThemeData.dark(),
-      home: const YouTubeFeedScreen(),
+      home: const YouTubePlayerScreen(),
     );
   }
 }
 
-class YouTubeFeedScreen extends StatefulWidget {
-  const YouTubeFeedScreen({Key? key}) : super(key: key);
+class YouTubePlayerScreen extends StatefulWidget {
+  const YouTubePlayerScreen({Key? key}) : super(key: key);
 
   @override
-  State<YouTubeFeedScreen> createState() => _YouTubeFeedScreenState();
+  State<YouTubePlayerScreen> createState() => _YouTubePlayerScreenState();
 }
 
-class _YouTubeFeedScreenState extends State<YouTubeFeedScreen> {
+class _YouTubePlayerScreenState extends State<YouTubePlayerScreen> with WidgetsBindingObserver {
   final TextEditingController _controller = TextEditingController(
-    text: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', // Рилток для теста
+    text: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
   );
   
-  BetterPlayerController? _betterPlayerController;
+  VideoPlayerController? _videoController;
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this); // Следим за сворачиванием приложения
+  }
+
+  @override
   void dispose() {
-    _betterPlayerController?.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _videoController?.dispose();
     _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _startPlayback(String url) async {
+  // Самая важная магия: не даем видео встать на паузу при уходе приложения в фон
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+      // Обычно Flutter ставит видео на паузу здесь. 
+      // Мы просто принудительно продолжаем играть поток.
+      _videoController?.play();
+    }
+  }
+
+  Future<void> _startVideo(String url) async {
     setState(() { _isLoading = true; });
+    if (_videoController != null) {
+      await _videoController!.dispose();
+    }
 
     try {
       final yt = YoutubeExplode();
-      // Парсим видео и получаем стрим
       final video = await yt.videos.get(url);
       final manifest = await yt.videos.streamsClient.getManifest(video.id);
-      // Берём поток с наилучшим качеством, содержащий и видео, и аудио
+      // Для фонового режима лучше всего брать muxed стрим (аудио+видео вместе)
       final streamInfo = manifest.muxed.withHighestVideoQuality();
       yt.close();
 
-      // Настройка BetterPlayer с конфигурацией фонового режима
-      BetterPlayerDataSource dataSource = BetterPlayerDataSource(
-        BetterPlayerDataSourceType.network,
-        streamInfo.url.toString(),
-        notificationConfiguration: BetterPlayerNotificationConfiguration(
-          showNotification: true,
-          title: video.title,
-          author: video.author,
-          imageUrl: video.thumbnails.mediumResUrl,
-          activityName: "MainActivity",
-        ),
-      );
-
-      _betterPlayerController = BetterPlayerController(
-        const BetterPlayerConfiguration(
-          autoPlay: true,
-          handleLifecycle: true, // Важно для работы в фоне
-        ),
-        betterPlayerDataSource: dataSource,
-      );
-
-      // Включаем фоновое воспроизведение
-      _betterPlayerController?.enablePictureInPicture(GlobalKey());
-
+      _videoController = VideoPlayerController.networkUrl(Uri.parse(streamInfo.url.toString()))
+        ..initialize().then((_) {
+          setState(() { _isLoading = false; });
+          _videoController!.play();
+          _videoController!.setLooping(true);
+        });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка загрузки: $e')),
-      );
-    } finally {
       setState(() { _isLoading = false; });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка парсинга: $e')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('YouTube Background Player')),
+      appBar: AppBar(title: const Text('Pure YT Background')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -94,23 +102,23 @@ class _YouTubeFeedScreenState extends State<YouTubeFeedScreen> {
             TextField(
               controller: _controller,
               decoration: const InputDecoration(
-                labelText: 'Ссылка на YouTube видео',
+                labelText: 'URL видео с YouTube',
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _isLoading ? null : () => _startPlayback(_controller.text),
+              onPressed: _isLoading ? null : () => _startVideo(_controller.text),
               child: _isLoading 
                   ? const CircularProgressIndicator() 
-                  : const Text('Воспроизвести в фоне'),
+                  : const Text('Запустить поток'),
             ),
             const SizedBox(height: 24),
-            if (_betterPlayerController != null)
+            if (_videoController != null && _videoController!.value.isInitialized)
               AspectRatio(
-                aspectRatio: 16 / 9,
-                child: BetterPlayer(controller: _betterPlayerController!),
-              ),
+                aspectRatio: _videoController!.value.aspectRatio,
+                child: VideoPlayer(_videoController!),
+              )
           ],
         ),
       ),
