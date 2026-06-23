@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '2.0.0'
+    ext.kotlin_version = '2.2.20' // Обновили до требуемой версии
     repositories {
         google()
         mavenCentral()
@@ -30,26 +30,15 @@ tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
 
-// ХАК ДЛЯ ИСПРАВЛЕНИЯ ОШИБКИ PROGUARD В СТОРОННИХ ПЛАГИНАХ
+// ИСПРАВЛЕННЫЙ ХАК: Срабатывает гарантированно ДО этапа полного анализа проекта
 subprojects {
-    afterEvaluate { project ->
-        if (project.hasProperty('android')) {
-            project.android.each { variant ->
-                try {
-                    // Автоматически заменяем устаревший файл во всех зависимостях на лету
-                    if (project.plugins.hasPlugin('com.android.library')) {
-                        project.android.buildTypes.each { buildType ->
-                            buildType.proguardFiles.replaceAll { file ->
-                                if (file.toString().contains('proguard-android.txt')) {
-                                    return project.android.getDefaultProguardFile('proguard-android-optimize.txt')
-                                }
-                                return file
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    // Игнорируем ошибки, если у проекта нет таких настроек
+    project.plugins.withType(com.android.build.gradle.LibraryPlugin) {
+        project.android.buildTypes.configureEach { buildType ->
+            buildType.proguardFiles.replaceAll { file ->
+                if (file.toString().contains('proguard-android.txt')) {
+                    return project.android.getDefaultProguardFile('proguard-android-optimize.txt')
                 }
+                return file
             }
         }
     }
