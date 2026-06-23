@@ -9,7 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_inappwebview: ^6.0.0
+  flutter_inappwebview: ^5.8.0  # ИСПРАВЛЕНО НА СТАБИЛЬНУЮ ВЕРСИЮ 5.x
   flutter_background_service: ^5.0.5
   wakelock_plus: ^1.2.8
 

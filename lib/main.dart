@@ -7,13 +7,8 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Удерживаем процессор от засыпания
   WakelockPlus.enable();
-  
-  // Запускаем фоновый сервис системы
   await initializeService();
-  
   runApp(const MyApp());
 }
 
@@ -88,21 +83,24 @@ class _YouTubeScreenState extends State<YouTubeScreen> {
           },
           child: InAppWebView(
             initialUrlRequest: URLRequest(url: WebUri("https://m.youtube.com")),
-            initialSettings: InAppWebViewSettings(
-              javaScriptEnabled: true,
-              domStorageEnabled: true,
-              mediaPlaybackRequiresUserGesture: false, // Разрешаем автоплей
-              
-              // КРИТИЧЕСКИ ВАЖНЫЕ НАСТРОЙКИ ДЛЯ ФОНА:
-              allowsBackgroundMediaPlayback: true, // Разрешаем играть в фоне на уровне движка
-              useShouldOverrideUrlLoading: true,
-              userAgent: "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+            // Настройки для версии 5.x изменены здесь:
+            initialOptions: InAppWebViewGroupOptions(
+              crossPlatform: InAppWebViewOptions(
+                javaScriptEnabled: true,
+                mediaPlaybackRequiresUserGesture: false,
+                userAgent: "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+              ),
+              android: AndroidInAppWebViewOptions(
+                domStorageEnabled: true,
+                // Разрешаем работу медиа в фоне на уровне движка
+                supportMultipleWindows: false,
+              ),
             ),
             onWebViewCreated: (controller) {
               webViewController = controller;
             },
             onLoadStop: (controller, url) async {
-              // Внедряем JS-скрипт, обманывающий Visibility API самого YouTube
+              // Обман Visibility API самого YouTube
               await controller.evaluateJavascript(source: '''
                 Object.defineProperty(document, 'hidden', {get: function() { return false; }, configurable: true});
                 Object.defineProperty(document, 'visibilityState', {get: function() { return 'visible'; }, configurable: true});
