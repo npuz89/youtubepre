@@ -27,14 +27,21 @@ jobs:
     - name: Install dependencies
       run: flutter pub get
 
-    # Исправляем ошибку Proguard в кэше плагина WebView
-    - name: Patch flutter_inappwebview Proguard Error
+    # Полный патч для плагина flutter_inappwebview
+    - name: Patch flutter_inappwebview Gradle Issues
       run: |
-        sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g" /home/runner/.pub-cache/hosted/pub.dev/flutter_inappwebview-5.8.0/android/build.gradle
+        WEBVIEW_BUILD_GRADLE="/home/runner/.pub-cache/hosted/pub.dev/flutter_inappwebview-5.8.0/android/build.gradle"
+        
+        # 1. Исправляем старую ошибку Proguard
+        sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g" "$WEBVIEW_BUILD_GRADLE"
+        
+        # 2. Внедряем обязательный namespace сразу после строки 'android {'
+        sed -i '/android {/a \    namespace "com.pichillilorenzo.flutter_inappwebview"' "$WEBVIEW_BUILD_GRADLE"
+        
+        echo "Патчи для flutter_inappwebview успешно применены!"
 
     - name: Build APK
       run: flutter build apk --debug --android-skip-build-dependency-validation
       env:
-        # Принудительно выделяем память для компилятора Java на сервере
         _JAVA_OPTIONS: "-Xmx4g"
         GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.workers.max=2"
