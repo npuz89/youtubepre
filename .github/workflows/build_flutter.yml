@@ -26,14 +26,27 @@ jobs:
     - name: Install dependencies
       run: flutter pub get
 
-    - name: Patch flutter_inappwebview Proguard Error
+    # ХАК 1: Исправляем ошибку Proguard в кэше плагина WebView
+     Cav- name: Patch flutter_inappwebview Proguard Error
       run: |
-        # Исправляем ошибку Proguard в кэше плагина
         sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g" /home/runner/.pub-cache/hosted/pub.dev/flutter_inappwebview-5.8.0/android/build.gradle
 
+    # ХАК 2: ЖЕСТКИЙ ПАТЧ САМОГО FLUTTER SDK (Вырезаем ломающиеся filePermissions)
+    - name: Patch Flutter SDK Core Bug
+      run: |
+        FLUTTER_PLUGIN_FILE="/opt/hostedtoolcache/flutter/stable-3.44.3-x64/flutter/packages/flutter_tools/gradle/src/main/kotlin/FlutterPlugin.kt"
+        if [ -f "$FLUTTER_PLUGIN_FILE" ]; then
+          echo "Файл найден, применяем патч..."
+          # Закомментируем строки 754-757, которые вызывают ошибку компиляции Kotlin
+          sed -i '754,757s/^/\/\/ /' "$FLUTTER_PLUGIN_FILE"
+        else
+          echo "Файл не найден по стандартному пути, ищем динамически..."
+          # На случай, если путь к SDK немного изменится
+          TARGET_FILE=$(find /opt/hostedtoolcache/flutter -name "FlutterPlugin.kt" | head -n 1)
+          if [ -not -z "$TARGET_FILE" ]; then
+            sed -i '754,757s/^/\/\/ /' "$TARGET_FILE"
+          fi
+        fi
+
     - name: Build APK
-      # Флаг -PkotlinVersion принудительно выставляет версию для всей сборки
-      run: flutter build apk --debug --android-skip-build-dependency-validation -PkotlinVersion=1.9.24
-      env:
-        # Этот флаг запрещает Flutter переписывать наши файлы build.gradle
-        FLUTTER_SUPPRESS_ANALYTICS: "true"
+      run: flutter build apk --debug --android-skip-build-dependency-validation
