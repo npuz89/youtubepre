@@ -1,5 +1,5 @@
-name: youtube_bg_player
-description: A new Flutter project.
+name: background_youtube
+description: YouTube player with background playback support
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,9 +9,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_inappwebview: ^5.8.0  # ИСПРАВЛЕНО НА СТАБИЛЬНУЮ ВЕРСИЮ 5.x
-  flutter_background_service: ^5.0.5
-  wakelock_plus: ^1.2.8
+  webview_flutter: ^4.4.0
+  media_kit: ^1.1.0
+  media_kit_video: ^1.2.0
+  shared_preferences: ^2.2.2
+  connectivity_plus: ^5.0.1
+  flutter_screenutil: ^5.9.0
+  permission_handler: ^11.0.1
+  wakelock_plus: ^1.1.0
 
 dev_dependencies:
   flutter_test:
