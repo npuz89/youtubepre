@@ -56,9 +56,9 @@ class _MainScreenState extends State<MainScreen> {
   
   final List<Widget> _screens = [
     const HomeScreen(),
-    const HomeScreen(), // Тренды
-    Container(), // Центральная кнопка
-    const HomeScreen(), // Подписки
+    const HomeScreen(),
+    Container(),
+    const HomeScreen(),
     const LibraryScreen(),
   ];
 

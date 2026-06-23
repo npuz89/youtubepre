@@ -18,30 +18,4 @@ class VideoModel {
     required this.uploadDate,
     required this.description,
   });
-
-  factory VideoModel.fromJson(Map<String, dynamic> json) {
-    return VideoModel(
-      id: json['id'] ?? '',
-      title: json['title'] ?? 'Без названия',
-      author: json['author'] ?? 'Неизвестный автор',
-      thumbnailUrl: json['thumbnailUrl'] ?? '',
-      duration: json['duration'] ?? '00:00',
-      views: json['views'] ?? 0,
-      uploadDate: json['uploadDate'] ?? '',
-      description: json['description'] ?? '',
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'title': title,
-      'author': author,
-      'thumbnailUrl': thumbnailUrl,
-      'duration': duration,
-      'views': views,
-      'uploadDate': uploadDate,
-      'description': description,
-    };
-  }
 }
