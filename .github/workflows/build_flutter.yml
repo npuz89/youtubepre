@@ -27,7 +27,7 @@ jobs:
       run: flutter pub get
 
     # ХАК 1: Исправляем ошибку Proguard в кэше плагина WebView
-     Cav- name: Patch flutter_inappwebview Proguard Error
+    - name: Patch flutter_inappwebview Proguard Error
       run: |
         sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g" /home/runner/.pub-cache/hosted/pub.dev/flutter_inappwebview-5.8.0/android/build.gradle
 
@@ -43,11 +43,10 @@ jobs:
           echo "Файл не найден по стандартному пути, ищем динамически..."
           # На случай, если путь к SDK немного изменится
           TARGET_FILE=$(find /opt/hostedtoolcache/flutter -name "FlutterPlugin.kt" | head -n 1)
-          if [ -not -z "$TARGET_FILE" ]; then
+          if [ ! -z "$TARGET_FILE" ]; then
             sed -i '754,757s/^/\/\/ /' "$TARGET_FILE"
           fi
         fi
 
     - name: Build APK
       run: flutter build apk --debug --android-skip-build-dependency-validation
-      
