@@ -22,31 +22,15 @@ jobs:
       uses: subosito/flutter-action@v2
       with:
         channel: 'stable'
+        flutter-version: '3.24.3' # ФИКСИРУЕМ СТАБИЛЬНУЮ ВЕРСИЮ БЕЗ БАГОВ
 
     - name: Install dependencies
       run: flutter pub get
 
-    # ХАК 1: Исправляем ошибку Proguard в кэше плагина WebView
+    # Исправляем ошибку Proguard в кэше плагина WebView
     - name: Patch flutter_inappwebview Proguard Error
       run: |
         sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g" /home/runner/.pub-cache/hosted/pub.dev/flutter_inappwebview-5.8.0/android/build.gradle
-
-    # ХАК 2: ЖЕСТКИЙ ПАТЧ САМОГО FLUTTER SDK (Вырезаем ломающиеся filePermissions)
-    - name: Patch Flutter SDK Core Bug
-      run: |
-        FLUTTER_PLUGIN_FILE="/opt/hostedtoolcache/flutter/stable-3.44.3-x64/flutter/packages/flutter_tools/gradle/src/main/kotlin/FlutterPlugin.kt"
-        if [ -f "$FLUTTER_PLUGIN_FILE" ]; then
-          echo "Файл найден, применяем патч..."
-          # Закомментируем строки 754-757, которые вызывают ошибку компиляции Kotlin
-          sed -i '754,757s/^/\/\/ /' "$FLUTTER_PLUGIN_FILE"
-        else
-          echo "Файл не найден по стандартному пути, ищем динамически..."
-          # На случай, если путь к SDK немного изменится
-          TARGET_FILE=$(find /opt/hostedtoolcache/flutter -name "FlutterPlugin.kt" | head -n 1)
-          if [ ! -z "$TARGET_FILE" ]; then
-            sed -i '754,757s/^/\/\/ /' "$TARGET_FILE"
-          fi
-        fi
 
     - name: Build APK
       run: flutter build apk --debug --android-skip-build-dependency-validation
