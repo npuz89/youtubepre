@@ -3,14 +3,14 @@ name: Build Android APK
 on:
   push:
     branches:
-      - main # Сборка будет запускаться при пуше в ветку main
+      - main # Сборка запустится при пуше в ветку main
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # Операционная система указывается здесь один раз
 
     steps:
-      - os: ubuntu-latest
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Java
@@ -22,7 +22,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.x' # Актуальная стабильная версия на середину 2026
+          flutter-version: '3.22.x'
 
       - name: Install dependencies
         run: flutter pub get
