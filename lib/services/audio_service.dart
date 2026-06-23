@@ -9,19 +9,23 @@ class AudioPlayerService extends BaseAudioHandler {
   final AudioPlayer _player = AudioPlayer();
   String? _currentVideoId;
   Timer? _progressTimer;
+  MediaItem? _currentMediaItem;
 
   AudioPlayerService() {
     _init();
   }
 
   Future<void> _init() async {
+    // Инициализация фонового воспроизведения
     await JustAudioBackground.init(
-      androidNotificationChannelId: 'com.example.youtube.audio',
+      androidNotificationChannelId: 'com.example.youtube.audio.channel',
       androidNotificationChannelName: 'YouTube Background Playback',
       androidNotificationOngoing: true,
       androidStopForegroundOnPause: true,
+      androidNotificationIcon: 'mipmap/ic_launcher',
     );
 
+    // Подписка на события воспроизведения
     _player.playbackEventStream.listen((event) {
       _broadcastState();
     });
@@ -31,17 +35,41 @@ class AudioPlayerService extends BaseAudioHandler {
         _broadcastState();
       }
     });
+
+    // Обработка завершения воспроизведения
+    _player.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
+        _broadcastState();
+      }
+    });
   }
 
   void _broadcastState() {
-    final state = _player.playing
-        ? PlaybackState.playing
-        : PlaybackState.paused;
-    
+    final playing = _player.playing;
+    final position = _player.position;
+    final duration = _player.duration;
+    final processingState = _player.processingState;
+
+    // Определяем состояние обработки
+    PlaybackState processingStateEnum;
+    if (processingState == ProcessingState.idle) {
+      processingStateEnum = PlaybackState.idle;
+    } else if (processingState == ProcessingState.loading) {
+      processingStateEnum = PlaybackState.loading;
+    } else if (processingState == ProcessingState.buffering) {
+      processingStateEnum = PlaybackState.buffering;
+    } else if (processingState == ProcessingState.ready) {
+      processingStateEnum = playing ? PlaybackState.playing : PlaybackState.paused;
+    } else if (processingState == ProcessingState.completed) {
+      processingStateEnum = PlaybackState.completed;
+    } else {
+      processingStateEnum = PlaybackState.idle;
+    }
+
     playbackState.add(PlaybackState(
       controls: [
         MediaControl.skipToPrevious,
-        _player.playing ? MediaControl.pause : MediaControl.play,
+        playing ? MediaControl.pause : MediaControl.play,
         MediaControl.skipToNext,
       ],
       systemActions: const {
@@ -49,15 +77,16 @@ class AudioPlayerService extends BaseAudioHandler {
         MediaAction.play,
         MediaAction.pause,
         MediaAction.stop,
+        MediaAction.skipToNext,
+        MediaAction.skipToPrevious,
       },
       androidCompactActionIndices: const [0, 1, 2],
-      processingState: _player.playing
-          ? ProcessingState.ready
-          : ProcessingState.idle,
-      playing: _player.playing,
-      updatePosition: _player.position,
+      processingState: processingStateEnum,
+      playing: playing,
+      updatePosition: position,
       bufferedPosition: _player.bufferedPosition,
       speed: _player.speed,
+      duration: duration,
     ));
   }
 
@@ -65,22 +94,38 @@ class AudioPlayerService extends BaseAudioHandler {
     try {
       _currentVideoId = videoId;
       
+      // Получаем URL аудио потока
       final audioUrl = await _youtubeService.getAudioStreamUrl(videoId);
-      if (audioUrl == null) throw Exception('Не удалось получить аудио');
+      if (audioUrl == null) {
+        throw Exception('Не удалось получить аудио поток для видео: $videoId');
+      }
 
-      final mediaItem = MediaItem(
+      // Создаем MediaItem для уведомления
+      _currentMediaItem = MediaItem(
         id: videoId,
-        title: title,
-        artist: author,
+        title: title.isNotEmpty ? title : 'Без названия',
+        artist: author.isNotEmpty ? author : 'Неизвестный автор',
+        album: 'YouTube',
         artUri: Uri.parse('https://img.youtube.com/vi/$videoId/hqdefault.jpg'),
+        duration: const Duration(seconds: 0), // Будет обновлено позже
       );
 
-      mediaItem.add(mediaItem);
+      // Устанавливаем медиа элемент
+      mediaItem.add(_currentMediaItem!);
 
+      // Загружаем аудио
       await _player.setAudioSource(
         AudioSource.uri(Uri.parse(audioUrl)),
       );
 
+      // Получаем реальную длительность
+      final duration = _player.duration;
+      if (duration != null && _currentMediaItem != null) {
+        _currentMediaItem = _currentMediaItem!.copyWith(duration: duration);
+        mediaItem.add(_currentMediaItem!);
+      }
+
+      // Начинаем воспроизведение
       await _player.play();
       
       _broadcastState();
@@ -125,23 +170,43 @@ class AudioPlayerService extends BaseAudioHandler {
 
   @override
   Future<void> skipToNext() async {
-    // Реализуйте переход к следующему видео в плейлисте
+    // Здесь можно реализовать переход к следующему видео в плейлисте
+    print('Skip to next');
   }
 
   @override
   Future<void> skipToPrevious() async {
-    // Реализуйте переход к предыдущему видео в плейлисте
+    // Здесь можно реализовать переход к предыдущему видео
+    print('Skip to previous');
   }
 
   @override
   Future<void> setSpeed(double speed) async {
-    await _player.setSpeed(speed);
+    await _player.setSpeed(speed.clamp(0.5, 2.0));
     _broadcastState();
+  }
+
+  @override
+  Future<void> setVolume(double volume) async {
+    await _player.setVolume(volume.clamp(0.0, 1.0));
+    _broadcastState();
+  }
+
+  // Получение текущего состояния
+  bool get isPlaying => _player.playing;
+  Duration get position => _player.position;
+  Duration? get duration => _player.duration;
+  String? get currentVideoId => _currentVideoId;
+
+  @override
+  Future<void> onTaskRemoved() async {
+    // Обработка удаления задачи
+    await _player.pause();
   }
 
   Future<void> dispose() async {
     _progressTimer?.cancel();
     await _player.dispose();
-    _youtubeService.dispose();
+    await _youtubeService.dispose();
   }
 }

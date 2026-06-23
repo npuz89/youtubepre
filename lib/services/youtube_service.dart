@@ -3,36 +3,25 @@ import '../models/video_model.dart';
 
 class YouTubeService {
   final YoutubeExplode _yt = YoutubeExplode();
+  
+  // Кеш для результатов
+  final Map<String, List<VideoModel>> _cache = {};
+  final Map<String, DateTime> _cacheTime = {};
+  final Duration _cacheDuration = const Duration(minutes: 5);
 
   // Поиск видео
   Future<List<VideoModel>> searchVideos(String query) async {
+    // Проверяем кеш
+    final cacheKey = 'search_$query';
+    if (_cache.containsKey(cacheKey) && 
+        DateTime.now().difference(_cacheTime[cacheKey]!) < _cacheDuration) {
+      return _cache[cacheKey]!;
+    }
+
     try {
       final searchResults = await _yt.search.getVideos(query);
       
-      return searchResults.map((video) {
-        return VideoModel(
-          id: video.id.value,
-          title: video.title,
-          author: video.author.name,
-          thumbnailUrl: video.thumbnails.first.url.toString(),
-          duration: video.duration?.toString() ?? '00:00',
-          views: 0, // В бесплатном API не всегда доступно
-          uploadDate: video.uploadDate?.toString() ?? '',
-          description: '',
-        );
-      }).toList();
-    } catch (e) {
-      print('Ошибка поиска: $e');
-      return [];
-    }
-  }
-
-  // Получение популярных видео
-  Future<List<VideoModel>> getTrendingVideos() async {
-    try {
-      final trending = await _yt.videos.getTrending();
-      
-      return trending.map((video) {
+      final videos = searchResults.map((video) {
         return VideoModel(
           id: video.id.value,
           title: video.title,
@@ -44,6 +33,47 @@ class YouTubeService {
           description: '',
         );
       }).toList();
+
+      // Сохраняем в кеш
+      _cache[cacheKey] = videos;
+      _cacheTime[cacheKey] = DateTime.now();
+
+      return videos;
+    } catch (e) {
+      print('Ошибка поиска: $e');
+      return [];
+    }
+  }
+
+  // Получение популярных видео
+  Future<List<VideoModel>> getTrendingVideos() async {
+    const cacheKey = 'trending';
+    if (_cache.containsKey(cacheKey) && 
+        DateTime.now().difference(_cacheTime[cacheKey]!) < _cacheDuration) {
+      return _cache[cacheKey]!;
+    }
+
+    try {
+      // Используем поиск по популярным запросам вместо getTrending
+      final searchResults = await _yt.search.getVideos('trending');
+      
+      final videos = searchResults.map((video) {
+        return VideoModel(
+          id: video.id.value,
+          title: video.title,
+          author: video.author.name,
+          thumbnailUrl: video.thumbnails.first.url.toString(),
+          duration: video.duration?.toString() ?? '00:00',
+          views: 0,
+          uploadDate: video.uploadDate?.toString() ?? '',
+          description: '',
+        );
+      }).toList();
+
+      _cache[cacheKey] = videos;
+      _cacheTime[cacheKey] = DateTime.now();
+
+      return videos;
     } catch (e) {
       print('Ошибка получения трендов: $e');
       return [];
@@ -75,7 +105,15 @@ class YouTubeService {
   Future<String?> getAudioStreamUrl(String videoId) async {
     try {
       final manifest = await _yt.videos.streams.getManifest(videoId);
-      final audioStream = manifest.audio.first;
+      
+      // Получаем лучший аудио поток
+      final audioStreams = manifest.audio;
+      if (audioStreams.isEmpty) {
+        throw Exception('Аудио потоки не найдены');
+      }
+      
+      // Берем первый аудио поток (обычно наилучшего качества)
+      final audioStream = audioStreams.first;
       return audioStream.url.toString();
     } catch (e) {
       print('Ошибка получения аудио: $e');
@@ -83,7 +121,14 @@ class YouTubeService {
     }
   }
 
+  // Очистка кеша
+  void clearCache() {
+    _cache.clear();
+    _cacheTime.clear();
+  }
+
   void dispose() {
     _yt.close();
+    clearCache();
   }
 }
